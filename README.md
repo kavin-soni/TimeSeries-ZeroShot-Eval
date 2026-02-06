@@ -41,6 +41,15 @@ To run the evaluation for a specific operational regime (e.g., Traffic):
 python main_eval.py --dataset traffic
 ```
 
+### 4. Hybrid Router Simulation
+To replicate the theoretical cost-savings analysis (Section 6 of the paper):
+```bash
+python src/models/router.py --n 5000 --threshold 0.15
+```
+
+## Hybrid Routing Architecture (Proposed)
+The repository includes the implementation logic for the **Hybrid Routing Architecture**. This system dynamically assigns forecast tasks to either a lightweight supervised model or a foundation model based on time series complexity. By routing stable, high-frequency series to models like XGBoost and utilizing foundation models for cold-start and periodic queries, the architecture optimizes total inference cost while maintaining robust accuracy.
+
 ## Final Benchmark Results
 
 | Dataset | Metric | TimesFM (Zero-Shot) | SNAIVE | XGBoost | LSTM |

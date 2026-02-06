@@ -7,6 +7,10 @@ data/*.csv
 data/*.zip
 data/*.gz
 
+# Ignore Internal Notebooks & Checkpoints
+notebooks/
+.ipynb_checkpoints/
+
 # Ignore Model Checkpoints
 *.ckpt
 *.bin
@@ -14,5 +18,4 @@ data/*.gz
 checkpoint/
 
 # Standard Junk
-.ipynb_checkpoints/
 .DS_Store
