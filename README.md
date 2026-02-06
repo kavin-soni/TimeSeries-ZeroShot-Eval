@@ -13,9 +13,12 @@ Time series forecasting remains central to operational decision-making across do
 ├── notebooks/          # Original exploration notebooks
 ├── results/            # Benchmark metrics (CSV and Markdown)
 └── src/
-    ├── models/         # TimesFM wrapper and Baseline implementations
+    ├── models/         # TimesFM wrapper, Baselines, and Hybrid Router
     └── utils/          # Data loaders and metric utilities
-├── main_eval.py        # Entry point for running benchmarks
+├── benchmark_lstm.py   # Latency benchmark for LSTM
+├── benchmark_timesfm.py # Latency benchmark for TimesFM
+├── benchmark_xgboost.py # Latency benchmark for XGBoost
+├── main_eval.py        # Entry point for running accuracy benchmarks
 ├── requirements.txt    # Python dependencies
 └── README.md
 ```
