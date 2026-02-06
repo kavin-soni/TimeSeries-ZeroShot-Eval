@@ -1,0 +1,8 @@
+pandas
+numpy
+torch
+timesfm @ git+https://github.com/google-research/timesfm.git
+xgboost
+scikit-learn
+tensorflow
+tqdm

@@ -1,0 +1,18 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Ignore Large Data Files
+data/*.csv
+data/*.zip
+data/*.gz
+
+# Ignore Model Checkpoints
+*.ckpt
+*.bin
+*.pth
+checkpoint/
+
+# Standard Junk
+.ipynb_checkpoints/
+.DS_Store
