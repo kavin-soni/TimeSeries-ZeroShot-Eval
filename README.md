@@ -59,4 +59,4 @@ python main_eval.py --dataset traffic
 | | RMSE | 0.034 | 0.093 | 0.007 | 0.022 |
 
 ## License
-[Insert License Here - e.g., Apache 2.0]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
