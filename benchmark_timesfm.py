@@ -41,7 +41,7 @@ def benchmark_timesfm(n_iter=50, batch_size=1, context_len=512, horizon_len=96):
             )
             
         # Using the official checkpoint
-        tfm.load_from_checkpoint(repo_id="google/timesfm-1.0-200m")
+        tfm.load_from_checkpoint(repo_id="google/timesfm-2.0-500m")
     else:
         print("SIMULATION MODE: No model loaded.")
         tfm = None
