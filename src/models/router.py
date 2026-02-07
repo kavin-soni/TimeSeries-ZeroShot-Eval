@@ -4,11 +4,16 @@ import argparse
 
 def run_simulation(n_series=5000, threshold=0.15):
     """
-    Simulates the 'Complexity Router' logic described in Section 6 of the paper.
+    Simulates the 'Theoretical Upper Bound' of the Complexity Router.
     
-    Generates a theoretical industrial fleet based on the Pareto Principle (80/20 rule):
-    - 80% 'Stable' series (Class X): XGBoost performs comparably to Foundation Models.
-    - 20% 'Complex' series (Class Z): Foundation Models provide significant lift (>15%).
+    CRITICAL NOTE: This is an 'Oracle' simulation.
+    In a real production system, routing decisions must be made based on 
+    ex-ante features (volatility, sparsity) before inference. 
+    
+    This script instead uses ex-post accuracy (MASE) to determine the 
+    optimal route. It answers the question: 
+    "If we could perfectly identify the 20% of series where TimesFM wins, 
+    how much compute would we save?"
     
     Args:
         n_series: Number of time series in the synthetic fleet.
