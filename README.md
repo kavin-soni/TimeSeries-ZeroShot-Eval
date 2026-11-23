@@ -1,187 +1,149 @@
-# Assessing the Operational Viability of Foundation Models for Time Series Forecasting
+# The Complexity Router: Cost-Aware Foundation Model Deployment for Time Series Forecasting
 
-**Kavin Soni, Debanshu Das, Vamshi Guduguntla** — Google
+**Kavin Soni, Vamshi Guduguntla, Debanshu Das** (Google)
 
-[arXiv Paper](https://arxiv.org/abs/2605.24381) | [Dataset Sources](#datasets)
+Accepted at the **Fourth Workshop on Large Language and Foundation Models (WLLFM 2026)**, held with **IEEE BigData 2026**, Phoenix, AZ, December 2026. IEEE Xplore link to be added on publication.
+
+[arXiv](https://arxiv.org/abs/2605.24381) | [Reproduce the paper](#reproduce-the-paper-cpu-about-1-minute) | [Earlier version (arXiv v1)](#earlier-version-arxiv-v1)
 
 ## Overview
 
-This repository contains the code and evaluation framework for our applied study comparing foundation models against supervised baselines for time series forecasting. We evaluate three foundation models (TimesFM 2.0, TimesFM 2.5, Chronos) against four supervised baselines (XGBoost, LSTM, PatchTST, DLinear) across four operational regimes.
+Time series foundation models (FMs) forecast zero-shot, but they cost far more to run than lightweight supervised specialists. The Complexity Router decides **before any model runs** whether each series goes to an FM or to a specialist, using four features of its history: spectral entropy, coefficient of variation, seasonal autocorrelation and trend strength.
 
-## Models Evaluated
+The evaluation uses only information available before deployment. The FM and the specialist are chosen per dataset on a calibration split, routing thresholds and a logistic regression are fit on the same split, and results are reported on held-out series over a headline split and 100 repeated random splits.
 
-| Model | Type | Parameters |
-|-------|------|------------|
-| TimesFM 2.0 | Foundation (zero-shot) | 500M |
-| TimesFM 2.5 | Foundation (zero-shot) | 200M |
-| Chronos T5-Base | Foundation (zero-shot) | 200M |
-| XGBoost | Supervised | — |
-| LSTM | Supervised | — |
-| PatchTST | Supervised | — |
-| DLinear | Supervised | — |
+## Key results
 
-## Datasets
+M4 Daily holdout (n = 2,537), where the FM (Chronos) and the specialist (DLinear) are close in accuracy:
 
-| Dataset | Domain | Freq | Series |
-|---------|--------|------|--------|
-| Traffic (PeMS) | Transportation | Hourly | 862 |
-| ETTh1 | Energy | Hourly | 7 |
-| Exchange Rate | Finance | Daily | 8 |
-| M4 (Daily) | General | Daily | 4227 |
+| Method | Series to FM | MASE | vs. always-FM |
+|---|---|---|---|
+| Always FM | 100% | 1.206 | |
+| Always specialist | 0% | 1.233 | +0.027 |
+| **1-of-4 vote rule** | **31.6%** | **1.179** | **-0.027**, better in all 100 repeated routing splits |
+| Logistic regression (same FM share) | 31.6% | 1.179 | -0.027 |
+| Oracle ranking (not deployable) | 50.3% | 1.059 | |
 
-### Dataset Download Links
+- On a mixed Traffic and M4 portfolio, the logistic regression beats the vote rule at equal FM share in 93% of splits.
+- Counting the router's own overhead, routing saves cost once an FM call costs more than about **11 specialist calls**.
+- Per-series hindsight selection (the better of two FMs by realized test error) would lower the M4 FM-class MASE from 1.206 to 1.065. It is not deployable, so the paper does not use it.
 
-**Traffic (Long-Horizon PeMS)** — 862 freeway sensor lanes, San Francisco Bay Area
-- Official source: https://pems.dot.ca.gov/
-- Commonly used preprocessed version: https://github.com/thuml/Time-Series-Library
+See the paper's Limitations section for scope: within-dataset routing evidence comes from M4 Daily, each model was trained once, and the cost ratio is a parameter.
 
-**ETTh1 (Electricity Transformer Temperature)**
-- Official source (Informer authors): https://github.com/zhouhaoyi/ETDataset
+## Reproduce the paper (CPU, about 1 minute)
 
-**Exchange Rate (LSTNet)**
-- Official source (Lai et al. 2018): https://github.com/laiguokun/multivariate-time-series-data (`exchange_rate` folder)
-
-**M4 Daily**
-- Official M4 competition: https://github.com/Mcompetitions/M4-methods/tree/master/Dataset
-- Kaggle mirror: https://www.kaggle.com/datasets/yogesh94/m4-forecasting-competition-dataset
-
-## Installation
-
-### Supervised baselines (CPU, runs locally)
+Every number, table and data figure in the paper is regenerated from the two committed per-series result files, without rerunning any model.
 
 ```bash
-pip install xgboost pandas numpy scipy scikit-learn matplotlib tensorflow torch
+pip install -r paper_wllfm2026/requirements.txt
+python paper_wllfm2026/make_paper_outputs.py
 ```
 
-### Foundation models (GPU required, Colab recommended)
+Outputs go to `paper_wllfm2026/outputs/`:
+
+| Output | Paper item |
+|---|---|
+| `tables/t2_tab.tex` | Table III, mean MASE per model |
+| `tables/m4_tab.tex` | Table VI, M4 Daily router results |
+| `tables/pooled_tab.tex` | Table VII, mixed Traffic and M4 portfolio |
+| `tables/cost_tab.tex` | Table VIII, expected cost vs. always-FM |
+| `pareto_m4.pdf` | Fig. 2, MASE vs. share routed to the FM |
+| `routing_features_m4.pdf` | Fig. 3, FM win rate by feature decile |
+| `nums.tex` | LaTeX macros for every number quoted in the text |
+| `summary.json` | All of the above in machine-readable form |
+
+Other paper items:
 
 ```bash
-# TimesFM 2.5 and Chronos
-git clone https://github.com/google-research/timesfm.git
-cd timesfm && pip install -e . && cd ..
-pip install chronos-forecasting
-
-# TimesFM 2.0 requires Python 3.10 (legacy package)
-# pip install timesfm  # in a Python 3.10 environment only
+python paper_wllfm2026/make_regime_map.py   # Fig. 1, regime map
+python paper_wllfm2026/time_features.py     # router overhead (feature-extraction latency)
 ```
 
-## Data Preparation
+- Table IV (ETTh1 and Exchange) comes from separate, unseeded runs of the model scripts below; the paper reports ranges where runs differ.
+- Table V (throughput) was measured separately on GPU (T4) and CPU (Xeon) hardware.
 
-Download the raw dataset files and place them in the repo root, then run:
+Inputs, in `results/`:
+
+| File | Contents |
+|---|---|
+| `per_series_results.csv` | MASE, RMSE and sMAPE per model, dataset and series |
+| `series_features.csv` | The four routing features and history length per series |
+
+## Rerun the models (GPU for FMs)
+
+### Datasets
+
+| Dataset | Domain | Freq | Series | Source |
+|---|---|---|---|---|
+| M4 Daily | Demand | Daily | 4,227 | [M4 competition](https://github.com/Mcompetitions/M4-methods/tree/master/Dataset) |
+| Traffic (PeMS) | Transport | Hourly | 862 | [PeMS](https://pems.dot.ca.gov/), preprocessed in [Time-Series-Library](https://github.com/thuml/Time-Series-Library) |
+| ETTh1 | Energy | Hourly | 7 | [ETDataset](https://github.com/zhouhaoyi/ETDataset) |
+| Exchange Rate | Finance | Daily | 8 | [LSTNet data](https://github.com/laiguokun/multivariate-time-series-data) |
+
+Place the raw files (`traffic.csv`, `ETTh1.csv`, `exchange_rate.csv`, `Daily-train.csv`, `Daily-test.csv`, `M4-info.csv`) in the repo root and run:
 
 ```bash
 python data_preprocessing.py
 ```
 
-This converts each dataset from wide to long format and generates the train/test CSV splits used by all model scripts.
-
-| Dataset | Raw File(s) |
-|---------|-------------|
-| Traffic (PeMS) | traffic.csv |
-| ETTh1 | ETTh1.csv |
-| Exchange Rate | exchange_rate.csv |
-| M4 Daily | Daily-train.csv, Daily-test.csv, M4-info.csv |
-
-## Running Experiments
-
-### Supervised baselines (run locally)
+### Models used in the paper
 
 ```bash
-python run_xgboost.py
-python run_lstm.py
-python run_patchtst_all.py
+pip install pandas numpy scipy scikit-learn matplotlib torch
 python run_dlinear_all.py
-```
+python run_patchtst_all.py
 
-### Foundation models (run on Colab with GPU)
-
-```bash
-python run_foundation_models.py --model timesfm25 --dataset traffic
+# Foundation models (GPU recommended)
+git clone https://github.com/google-research/timesfm.git && pip install -e timesfm
+pip install chronos-forecasting
 python run_foundation_models.py --model timesfm25 --dataset m4
-python run_foundation_models.py --model chronos --dataset traffic
-python run_foundation_models.py --model chronos --dataset m4
+python run_foundation_models.py --model chronos   --dataset m4
+python run_foundation_models.py --model timesfm25 --dataset traffic
+python run_foundation_models.py --model chronos   --dataset traffic
 
-# TimesFM 2.0 requires a separate Python 3.10 environment
-# See run_foundation_models.py docstring for instructions
-```
-
-### Complexity Router analysis
-
-```bash
 python results/extract_series_features.py
-python results/routing_analysis.py          # full-dataset analysis
-python results/routing_analysis_holdout.py  # calibration/holdout split (paper results)
-# Figures saved to figures/
 ```
 
-## Complexity Router Evaluation
+Specialist training and Chronos sampling are not seeded, so reruns differ from the committed results (the paper reports about 0.05 MASE between runs of DLinear on Traffic). The committed CSVs are the runs behind the paper's numbers.
 
-The Complexity Router determines whether to send a series to a foundation model (FM) or a supervised specialist based on four time-series features. Two scripts implement this analysis:
+## Earlier version (arXiv v1)
 
-**`results/routing_analysis.py`** — Full-dataset analysis across all 5,089 series (862 Traffic + 4,227 M4). Derives routing feature thresholds and generates the FM win-rate decile figure (`figures/routing_feature_analysis.pdf`). Used for exploratory analysis only; thresholds and Pareto results are in-sample.
+arXiv v1 ("Assessing the Operational Viability of Foundation Models for Time Series Forecasting") labeled series using realized test error, which is not available before deployment; its router results are superseded by the WLLFM 2026 paper. Kept for reference only:
 
-**`results/routing_analysis_holdout.py`** — Calibration/holdout split for out-of-sample evaluation. All paper-reported numbers come from this script: oracle Pareto (MASE=0.964, α=0.29, 70% cost reduction) and deployed binary router (MASE=0.981, 33% cost reduction).
+- `results/routing_analysis.py`, `results/routing_analysis_holdout.py`: v1 analyses (the paper code imports the latter only for threshold derivation and decile tables).
+- `run_xgboost.py`, `run_lstm.py`, TimesFM 2.0 in `run_foundation_models.py`: v1-only models. "The paper" and "Table 2" in these scripts refer to v1.
 
-| Split | Series | Purpose |
-|-------|--------|---------|
-| Calibration (40%) | 2,036 (345 Traffic + 1,691 M4) | Threshold derivation |
-| Holdout (60%) | 3,053 (517 Traffic + 2,536 M4) | Pareto frontier evaluation |
-
-Random seed: 42 (set via `np.random.default_rng(42)` for reproducibility).
-
-**Calibration routing thresholds** (FM wins when):
-
-| Feature | Condition |
-|---------|-----------|
-| Spectral Entropy | ≥ 0.1471 |
-| Coefficient of Variation | ≥ 0.2132 |
-| Seasonal Autocorrelation | < 0.9048 or ≥ 0.9902 |
-| Trend Strength (R²) | < 0.0136 |
-
-**Oracle Pareto knee**: α=0.29, cost=296×, MASE=0.964, 70.4% cost reduction vs pure FM deployment (series ranked by true per-series FM advantage).
-**Deployed binary router**: MASE=0.981, 33% cost reduction (2-of-4 majority vote on holdout).
-
-## Results
-
-See Table 2 in the paper for full results. Key findings:
-
-- Foundation models outperform all supervised baselines on Traffic (periodic, high-frequency)
-- XGBoost dominates on Energy (physically constrained)
-- TimesFM 2.5 leads on Exchange Rate, suggesting newer FM architectures are closing the gap in stochastic domains
-- The Complexity Router has two evaluated operating points, both from `routing_analysis_holdout.py`:
-
-  - **Deployed binary router (2-of-4 majority vote):** routes 67% of holdout series to FM, matching FM-level accuracy (MASE=0.981) while eliminating 33% of FM inference calls. The four threshold conditions recover the FM-favorable population within 0.8 percentage points of oracle (67.0% vs 67.8%).
-
-  - **Oracle Pareto analysis (upper bound):** series ranked by true per-series FM advantage; knee at α=0.29, MASE=0.964, 296× cost — a 70% reduction vs pure FM deployment. Represents the maximum achievable with perfect FM-advantage knowledge. Random router at identical cost achieves MASE=1.117.
-
-  The gap (0.017 MASE) between oracle and deployed quantifies the approximation cost of binary threshold routing.
-
-## Repository Structure
+## Repository structure
 
 ```
-├── run_foundation_models.py        # TimesFM 2.0, 2.5, Chronos
-├── run_xgboost.py                  # XGBoost baseline
-├── run_lstm.py                     # LSTM baseline
-├── run_patchtst_all.py             # PatchTST baseline
-├── run_dlinear_all.py              # DLinear baseline
-├── results/
-│   ├── extract_series_features.py      # Feature extraction
-│   ├── routing_analysis.py             # Full-dataset router analysis
-│   ├── routing_analysis_holdout.py     # Calibration/holdout split (paper results)
-│   └── per_series_results.csv          # Per-series MASE
-├── figures/                        # Generated plots
-└── data/                           # Dataset CSVs
+paper_wllfm2026/
+  router_lib.py              # splits, model choice, vote rule, logistic regression, oracle, bootstrap
+  make_paper_outputs.py      # all tables, Figs. 2-3 and nums.tex
+  make_regime_map.py         # Fig. 1
+  time_features.py           # router overhead timing
+  requirements.txt
+results/
+  per_series_results.csv     # per-series MASE for every model (paper inputs)
+  series_features.csv        # routing features per series (paper inputs)
+  extract_series_features.py
+  routing_analysis_holdout.py
+  routing_analysis.py        # v1 only
+src/                         # DLinear, PatchTST and metric implementations
+run_dlinear_all.py, run_patchtst_all.py, run_foundation_models.py
+run_xgboost.py, run_lstm.py  # v1 only
+data_preprocessing.py
 ```
 
 ## Citation
 
-If you find this work useful, please cite:
-
 ```bibtex
-@article{soni2026foundation,
-  title={Assessing the Operational Viability of Foundation Models for Time Series Forecasting},
-  author={Soni, Kavin and Das, Debanshu and Guduguntla, Vamshi},
-  journal={arXiv preprint},
-  year={2026}
+@inproceedings{soni2026complexity,
+  title         = {The Complexity Router: Cost-Aware Foundation Model Deployment for Time Series Forecasting},
+  author        = {Soni, Kavin and Guduguntla, Vamshi and Das, Debanshu},
+  booktitle     = {Fourth Workshop on Large Language and Foundation Models (WLLFM), IEEE International Conference on Big Data},
+  year          = {2026},
+  eprint        = {2605.24381},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG}
 }
 ```

@@ -1,6 +1,14 @@
 """
 routing_analysis_holdout.py — Calibration/holdout split validation of the Complexity Router.
 
+NOTE (WLLFM 2026 paper): this script reproduces the arXiv v1 analysis. Run on
+its own, it labels each series by the per-series best of two FMs and two
+specialists using realized test error (hindsight), which is not available
+before deployment; its printed numbers (e.g. MASE 0.981 / 0.964) are
+superseded. The WLLFM 2026 paper imports this module only for threshold
+derivation, feature labels and decile tables, with deployable labels from
+calibration-split model choice. See paper_wllfm2026/ for the paper's numbers.
+
 Addresses in-sample evaluation concern by deriving routing thresholds on a 40%
 calibration split and evaluating the Pareto frontier on the remaining 60% holdout.
 
